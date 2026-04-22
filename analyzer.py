@@ -13,7 +13,6 @@ from typing import Optional, List
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from google.api_core.exceptions import ResourceExhausted, GoogleAPIError
 
 from database import get_posts_needing_analysis, insert_analysis
 
@@ -211,15 +210,14 @@ def analyze_post(post: dict) -> Optional[dict]:
                 f"(attempt {attempt}/{MAX_RETRIES})"
             )
             print(f"           Raw response: {content[:200]}")
-        except ResourceExhausted:
-            wait = 2 ** attempt
-            print(f"[Analyzer] Rate limit hit for {post['post_id']}, waiting {wait}s ...")
-            time.sleep(wait)
-            continue
-        except GoogleAPIError as e:
-            print(f"[Analyzer] API error for {post['post_id']} (attempt {attempt}): {str(e)[:100]}")
         except Exception as e:
-            print(f"[Analyzer] Unexpected error for {post['post_id']} (attempt {attempt}): {type(e).__name__}")
+            error_str = str(e).lower()
+            if "resource" in error_str or "quota" in error_str or "rate" in error_str:
+                wait = 2 ** attempt
+                print(f"[Analyzer] Rate limit hit for {post['post_id']}, waiting {wait}s ...")
+                time.sleep(wait)
+                continue
+            print(f"[Analyzer] API error for {post['post_id']} (attempt {attempt}): {str(e)[:100]}")
 
         if attempt < MAX_RETRIES:
             time.sleep(2 ** attempt)
