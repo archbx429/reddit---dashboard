@@ -406,6 +406,9 @@ def main():
         )
 
     if trigger:
+        # Reload subreddit list to pick up newly added channels
+        ALL_SUBREDDITS = _load_subreddits()
+
         with st.status("正在执行抓取与分析 ...", expanded=True) as status:
             st.write("⏳ 正在抓取 Reddit 帖子 ...")
             try:

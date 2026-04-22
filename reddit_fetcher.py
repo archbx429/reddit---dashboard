@@ -167,7 +167,10 @@ def fetch_all() -> int:
     fetch_date = datetime.now().strftime("%Y-%m-%d")
     total_new = 0
 
-    for subreddit in SUBREDDITS:
+    # Reload subreddits list dynamically to pick up newly added channels
+    current_subreddits = _load_subreddits()
+
+    for subreddit in current_subreddits:
         for category in CATEGORIES:
             print(f"[Fetcher] Fetching r/{subreddit}/{category} ...")
             raw = fetch_subreddit(subreddit, category)
