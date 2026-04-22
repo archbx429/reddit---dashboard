@@ -12,7 +12,14 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from database import get_available_dates, get_posts_with_analysis, init_db
+from database import (
+    get_available_dates,
+    get_posts_with_analysis,
+    init_db,
+    get_all_subreddits,
+    add_subreddit,
+    init_default_subreddits,
+)
 from reddit_fetcher import fetch_all
 from analyzer import analyze_all
 from scheduler import create_scheduler
@@ -339,26 +346,13 @@ CONTENT_TYPE_MAP = {
 ALL_SUBREDDITS = ["bambulab", "EufyMakeOfficial", "snapmaker"]
 
 # ── Subreddit management ──────────────────────────────────────────────────────
-SUBREDDIT_CONFIG_FILE = "subreddit_config.json"
+DEFAULT_SUBREDDITS = ["bambulab", "EufyMakeOfficial", "snapmaker"]
 
-def _load_subreddits() -> List[str]:
-    """Load subreddit list from config file or use defaults."""
-    if os.path.exists(SUBREDDIT_CONFIG_FILE):
-        try:
-            with open(SUBREDDIT_CONFIG_FILE, "r") as f:
-                data = json.load(f)
-                return data.get("subreddits", ALL_SUBREDDITS)
-        except Exception:
-            return ALL_SUBREDDITS
-    return ALL_SUBREDDITS
+# Initialize database with default subreddits on first run
+init_default_subreddits(DEFAULT_SUBREDDITS)
 
-def _save_subreddits(subreddits: List[str]):
-    """Save subreddit list to config file."""
-    with open(SUBREDDIT_CONFIG_FILE, "w") as f:
-        json.dump({"subreddits": subreddits}, f, indent=2)
-
-# Load subreddits from config
-ALL_SUBREDDITS = _load_subreddits()
+# Load subreddits from database
+ALL_SUBREDDITS = get_all_subreddits(default=DEFAULT_SUBREDDITS)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -408,7 +402,7 @@ def main():
     if trigger:
         # Reload subreddit list to pick up newly added channels
         global ALL_SUBREDDITS
-        ALL_SUBREDDITS = _load_subreddits()
+        ALL_SUBREDDITS = get_all_subreddits(default=DEFAULT_SUBREDDITS)
 
         with st.status("正在执行抓取与分析 ...", expanded=True) as status:
             st.write("⏳ 正在抓取 Reddit 帖子 ...")
@@ -447,10 +441,13 @@ def main():
             # Check if already exists (case-insensitive)
             existing_names = [s.lower() for s in ALL_SUBREDDITS]
             if subreddit_name.lower() not in existing_names:
-                updated_list = ALL_SUBREDDITS + [subreddit_name]
-                _save_subreddits(updated_list)
-                st.success(f"✅ 成功添加频道: **{subreddit_name}**")
-                st.rerun()
+                if add_subreddit(subreddit_name):
+                    # Reload from database
+                    ALL_SUBREDDITS = get_all_subreddits(default=DEFAULT_SUBREDDITS)
+                    st.success(f"✅ 成功添加频道: **{subreddit_name}**")
+                    st.rerun()
+                else:
+                    st.error(f"❌ 添加频道失败")
             else:
                 st.warning(f"⚠️ 频道 **{subreddit_name}** 已存在")
 

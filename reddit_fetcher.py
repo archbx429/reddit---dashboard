@@ -11,24 +11,16 @@ from typing import List
 
 import requests
 
-from database import init_db, insert_post, update_post_comments
+from database import init_db, insert_post, update_post_comments, get_all_subreddits, init_default_subreddits
 
-# Load subreddits from config file or use defaults
+# Default subreddits
 DEFAULT_SUBREDDITS = ["bambulab", "EufyMakeOfficial", "snapmaker"]
-SUBREDDIT_CONFIG_FILE = "subreddit_config.json"
 
-def _load_subreddits() -> List[str]:
-    """Load subreddit list from config file or use defaults."""
-    if os.path.exists(SUBREDDIT_CONFIG_FILE):
-        try:
-            with open(SUBREDDIT_CONFIG_FILE, "r") as f:
-                data = json.load(f)
-                return data.get("subreddits", DEFAULT_SUBREDDITS)
-        except Exception:
-            return DEFAULT_SUBREDDITS
-    return DEFAULT_SUBREDDITS
+# Initialize database with defaults on first run
+init_default_subreddits(DEFAULT_SUBREDDITS)
 
-SUBREDDITS = _load_subreddits()
+# Load subreddits from database
+SUBREDDITS = get_all_subreddits(default=DEFAULT_SUBREDDITS)
 CATEGORIES = ["hot", "new"]
 LIMIT = 20
 
@@ -180,8 +172,8 @@ def fetch_all() -> int:
     fetch_date = datetime.now().strftime("%Y-%m-%d")
     total_new = 0
 
-    # Reload subreddits list dynamically to pick up newly added channels
-    current_subreddits = _load_subreddits()
+    # Reload subreddits list dynamically from database to pick up newly added channels
+    current_subreddits = get_all_subreddits(default=DEFAULT_SUBREDDITS)
 
     for subreddit in current_subreddits:
         for category in CATEGORIES:

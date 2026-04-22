@@ -42,6 +42,13 @@ def init_db():
                     analyzed_at   TEXT
                 )
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS subreddits (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name          TEXT NOT NULL UNIQUE,
+                    added_at      TEXT
+                )
+            """)
             conn.commit()
 
             # Migration: add top_comments to existing tables that don't have it
@@ -211,3 +218,49 @@ def get_available_dates() -> List[str]:
     except Exception as e:
         print(f"[DB] Error fetching available dates: {e}")
         return []
+
+
+def get_all_subreddits(default: Optional[List[str]] = None) -> List[str]:
+    """Get all subreddits from database; return defaults if empty."""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM subreddits ORDER BY added_at DESC")
+            subs = [row["name"] for row in cursor.fetchall()]
+            return subs if subs else (default or [])
+    except Exception as e:
+        print(f"[DB] Error fetching subreddits: {e}")
+        return default or []
+
+
+def add_subreddit(name: str) -> bool:
+    """Add a new subreddit to the database."""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR IGNORE INTO subreddits (name, added_at) VALUES (?, ?)",
+                (name, datetime.now().isoformat())
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+    except Exception as e:
+        print(f"[DB] Error adding subreddit: {e}")
+        return False
+
+
+def init_default_subreddits(defaults: List[str]) -> None:
+    """Initialize database with default subreddits if table is empty."""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) as cnt FROM subreddits")
+            if cursor.fetchone()["cnt"] == 0:
+                for sub in defaults:
+                    cursor.execute(
+                        "INSERT OR IGNORE INTO subreddits (name, added_at) VALUES (?, ?)",
+                        (sub, datetime.now().isoformat())
+                    )
+                conn.commit()
+    except Exception as e:
+        print(f"[DB] Error initializing default subreddits: {e}")
