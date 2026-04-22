@@ -50,6 +50,7 @@ def init_db():
                 )
             """)
             conn.commit()
+            print("[DB] subreddits table created or already exists")
 
             # Migration: add top_comments to existing tables that don't have it
             try:
@@ -254,13 +255,30 @@ def init_default_subreddits(defaults: List[str]) -> None:
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
+
+            # First ensure table exists
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS subreddits (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name          TEXT NOT NULL UNIQUE,
+                    added_at      TEXT
+                )
+            """)
+            conn.commit()
+
+            # Check and initialize defaults
             cursor.execute("SELECT COUNT(*) as cnt FROM subreddits")
             if cursor.fetchone()["cnt"] == 0:
+                print("[DB] Initializing default subreddits...")
                 for sub in defaults:
-                    cursor.execute(
-                        "INSERT OR IGNORE INTO subreddits (name, added_at) VALUES (?, ?)",
-                        (sub, datetime.now().isoformat())
-                    )
+                    try:
+                        cursor.execute(
+                            "INSERT INTO subreddits (name, added_at) VALUES (?, ?)",
+                            (sub, datetime.now().isoformat())
+                        )
+                        print(f"[DB]   ✓ Added: {sub}")
+                    except sqlite3.IntegrityError:
+                        pass  # Already exists
                 conn.commit()
     except Exception as e:
         print(f"[DB] Error initializing default subreddits: {e}")
