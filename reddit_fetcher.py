@@ -54,21 +54,34 @@ def fetch_subreddit(subreddit: str, category: str = "hot") -> List[dict]:
     """
     Fetch up to LIMIT posts from a subreddit via the public JSON endpoint.
     Returns a list of raw post dicts from Reddit's 'children' array.
+    Retries up to 3 times on failure.
     """
     url = f"https://www.reddit.com/r/{subreddit}/{category}.json?limit={LIMIT}"
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("data", {}).get("children", [])
-    except requests.exceptions.HTTPError as e:
-        print(f"[Fetcher] HTTP error for r/{subreddit}/{category}: {e}")
-    except requests.exceptions.ConnectionError:
-        print(f"[Fetcher] Connection error for r/{subreddit}/{category}")
-    except requests.exceptions.Timeout:
-        print(f"[Fetcher] Timeout for r/{subreddit}/{category}")
-    except Exception as e:
-        print(f"[Fetcher] Unexpected error for r/{subreddit}/{category}: {e}")
+    max_retries = 3
+
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(url, headers=HEADERS, timeout=20)
+            resp.raise_for_status()
+            data = resp.json()
+            posts = data.get("data", {}).get("children", [])
+            if posts:
+                return posts
+        except requests.exceptions.HTTPError as e:
+            print(f"[Fetcher] HTTP error for r/{subreddit}/{category} (attempt {attempt+1}): {e}")
+        except requests.exceptions.ConnectionError as e:
+            print(f"[Fetcher] Connection error for r/{subreddit}/{category} (attempt {attempt+1})")
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)  # Exponential backoff
+        except requests.exceptions.Timeout:
+            print(f"[Fetcher] Timeout for r/{subreddit}/{category} (attempt {attempt+1})")
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)
+        except Exception as e:
+            print(f"[Fetcher] Unexpected error for r/{subreddit}/{category} (attempt {attempt+1}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)
+
     return []
 
 
