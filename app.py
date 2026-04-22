@@ -145,6 +145,55 @@ st.markdown("""
         display: flex !important;
         flex-direction: column !important;
     }
+
+    /* Mobile responsive design */
+    @media (max-width: 768px) {
+        /* Adjust main container padding for mobile */
+        .main {
+            padding: 10px !important;
+        }
+
+        /* Make metric cards stack on mobile */
+        [data-testid="metric-container"] {
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        /* Adjust table font size for mobile */
+        table {
+            font-size: 12px;
+        }
+
+        /* Make buttons full width on mobile */
+        .stButton > button {
+            width: 100% !important;
+            padding: 12px 16px !important;
+        }
+
+        /* Adjust title size for mobile */
+        h1 {
+            font-size: 24px;
+        }
+
+        h2 {
+            font-size: 18px;
+        }
+
+        /* Stack columns on very small screens */
+        @media (max-width: 480px) {
+            [data-testid="column"] {
+                min-width: 100% !important;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            .stMetric {
+                padding: 10px 0;
+            }
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
