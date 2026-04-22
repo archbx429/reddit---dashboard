@@ -443,8 +443,10 @@ def main():
             add_btn = st.button("添加频道", use_container_width=True)
 
         if add_btn and new_subreddit:
-            subreddit_name = new_subreddit.strip().lower()
-            if subreddit_name not in ALL_SUBREDDITS:
+            subreddit_name = new_subreddit.strip()
+            # Check if already exists (case-insensitive)
+            existing_names = [s.lower() for s in ALL_SUBREDDITS]
+            if subreddit_name.lower() not in existing_names:
                 updated_list = ALL_SUBREDDITS + [subreddit_name]
                 _save_subreddits(updated_list)
                 st.success(f"✅ 成功添加频道: **{subreddit_name}**")
