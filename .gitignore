@@ -1,0 +1,6 @@
+reddit_monitor.db
+subreddit_config.json
+*.pyc
+__pycache__/
+.env
+.streamlit/secrets.toml

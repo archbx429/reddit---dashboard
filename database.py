@@ -222,20 +222,43 @@ def get_available_dates() -> List[str]:
 
 
 def get_all_subreddits(default: Optional[List[str]] = None) -> List[str]:
-    """Get all subreddits from database; return defaults if empty."""
+    """Get all subreddits from config file or database; return defaults if empty."""
+    import os
+
+    # First try to load from config file (JSON) - this persists on Streamlit Cloud
+    config_file = "subreddit_config.json"
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, "r") as f:
+                data = json.load(f)
+                subs = data.get("subreddits", [])
+                if subs:
+                    print(f"[Config] Loaded {len(subs)} subreddits from config file")
+                    return subs
+        except Exception as e:
+            print(f"[Config] Error reading config file: {e}")
+
+    # Fallback to database
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT name FROM subreddits ORDER BY added_at DESC")
             subs = [row["name"] for row in cursor.fetchall()]
-            return subs if subs else (default or [])
+            if subs:
+                return subs
     except Exception as e:
         print(f"[DB] Error fetching subreddits: {e}")
-        return default or []
+
+    return default or []
 
 
 def add_subreddit(name: str) -> bool:
-    """Add a new subreddit to the database."""
+    """Add a new subreddit to both database and config file."""
+    import os
+
+    success = False
+
+    # Save to database
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -244,10 +267,36 @@ def add_subreddit(name: str) -> bool:
                 (name, datetime.now().isoformat())
             )
             conn.commit()
-            return cursor.rowcount > 0
+            success = cursor.rowcount > 0
+            print(f"[DB] Added subreddit to database: {name}")
     except Exception as e:
-        print(f"[DB] Error adding subreddit: {e}")
-        return False
+        print(f"[DB] Error adding subreddit to database: {e}")
+
+    # Save to config file (for persistence on Streamlit Cloud)
+    try:
+        config_file = "subreddit_config.json"
+        subs = []
+
+        # Read existing
+        if os.path.exists(config_file):
+            with open(config_file, "r") as f:
+                data = json.load(f)
+                subs = data.get("subreddits", [])
+
+        # Add new if not exists
+        if name not in subs:
+            subs.append(name)
+            with open(config_file, "w") as f:
+                json.dump({"subreddits": subs}, f, indent=2)
+            print(f"[Config] Added subreddit to config file: {name}")
+            success = True
+        else:
+            print(f"[Config] Subreddit already in config: {name}")
+
+    except Exception as e:
+        print(f"[Config] Error adding to config file: {e}")
+
+    return success
 
 
 def init_default_subreddits(defaults: List[str]) -> None:
