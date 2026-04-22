@@ -234,9 +234,27 @@ st.markdown("""
         }
     }
 
-    /* Plotly chart toolbar styling */
+    /* Plotly chart toolbar styling - remove dark background */
+    .modebar {
+        background: transparent !important;
+    }
+
+    .modebar-group {
+        background: transparent !important;
+    }
+
+    .modebar-btn {
+        background: transparent !important;
+        color: #2D3748 !important;
+    }
+
+    .modebar-btn:hover {
+        background: #F0F3FF !important;
+        color: #2D3748 !important;
+    }
+
     .plotly-graph-div .modebar {
-        background: white !important;
+        background: transparent !important;
     }
 
     .plotly-graph-div .modebar-btn {
