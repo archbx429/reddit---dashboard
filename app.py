@@ -4,6 +4,7 @@ Run:  streamlit run app.py
 """
 
 import json
+import os
 from datetime import datetime
 from typing import List, Optional
 
@@ -337,6 +338,28 @@ CONTENT_TYPE_MAP = {
 }
 ALL_SUBREDDITS = ["bambulab", "EufyMakeOfficial", "snapmaker"]
 
+# ── Subreddit management ──────────────────────────────────────────────────────
+SUBREDDIT_CONFIG_FILE = "subreddit_config.json"
+
+def _load_subreddits() -> List[str]:
+    """Load subreddit list from config file or use defaults."""
+    if os.path.exists(SUBREDDIT_CONFIG_FILE):
+        try:
+            with open(SUBREDDIT_CONFIG_FILE, "r") as f:
+                data = json.load(f)
+                return data.get("subreddits", ALL_SUBREDDITS)
+        except Exception:
+            return ALL_SUBREDDITS
+    return ALL_SUBREDDITS
+
+def _save_subreddits(subreddits: List[str]):
+    """Save subreddit list to config file."""
+    with open(SUBREDDIT_CONFIG_FILE, "w") as f:
+        json.dump({"subreddits": subreddits}, f, indent=2)
+
+# Load subreddits from config
+ALL_SUBREDDITS = _load_subreddits()
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _parse_topics(val) -> list:
@@ -402,6 +425,31 @@ def main():
         st.rerun()
 
     st.divider()
+
+    # ── Subreddit management ──────────────────────────────────────────────────
+    with st.expander("➕ 管理频道（添加新频道）"):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            new_subreddit = st.text_input(
+                "输入新频道名称",
+                placeholder="例如：Ender3 或 3Dprinting",
+                label_visibility="collapsed",
+            )
+        with col2:
+            add_btn = st.button("添加频道", use_container_width=True)
+
+        if add_btn and new_subreddit:
+            subreddit_name = new_subreddit.strip().lower()
+            if subreddit_name not in ALL_SUBREDDITS:
+                updated_list = ALL_SUBREDDITS + [subreddit_name]
+                _save_subreddits(updated_list)
+                st.success(f"✅ 成功添加频道: **{subreddit_name}**")
+                st.rerun()
+            else:
+                st.warning(f"⚠️ 频道 **{subreddit_name}** 已存在")
+
+        st.caption(f"当前频道数: {len(ALL_SUBREDDITS)}")
+        st.write("**已有频道：**", ", ".join(ALL_SUBREDDITS))
 
     # ── Filter row ───────────────────────────────────────────────────────────
     dates = get_available_dates()

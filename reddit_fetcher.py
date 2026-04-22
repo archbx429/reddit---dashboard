@@ -4,6 +4,7 @@ No API key required — uses the open /<subreddit>/<sort>.json endpoint.
 """
 
 import json
+import os
 import time
 from datetime import datetime
 from typing import List
@@ -12,7 +13,22 @@ import requests
 
 from database import init_db, insert_post, update_post_comments
 
-SUBREDDITS = ["bambulab", "EufyMakeOfficial", "snapmaker"]
+# Load subreddits from config file or use defaults
+DEFAULT_SUBREDDITS = ["bambulab", "EufyMakeOfficial", "snapmaker"]
+SUBREDDIT_CONFIG_FILE = "subreddit_config.json"
+
+def _load_subreddits() -> List[str]:
+    """Load subreddit list from config file or use defaults."""
+    if os.path.exists(SUBREDDIT_CONFIG_FILE):
+        try:
+            with open(SUBREDDIT_CONFIG_FILE, "r") as f:
+                data = json.load(f)
+                return data.get("subreddits", DEFAULT_SUBREDDITS)
+        except Exception:
+            return DEFAULT_SUBREDDITS
+    return DEFAULT_SUBREDDITS
+
+SUBREDDITS = _load_subreddits()
 CATEGORIES = ["hot", "new"]
 LIMIT = 20
 
