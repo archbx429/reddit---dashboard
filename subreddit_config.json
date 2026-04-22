@@ -2,8 +2,7 @@
   "subreddits": [
     "bambulab",
     "EufyMakeOfficial",
-    "snapmaker",
-    "3Dprinting"
+    "snapmaker"
   ],
   "note": "Add your subreddit names here and commit to persist changes on Streamlit Cloud"
 }
