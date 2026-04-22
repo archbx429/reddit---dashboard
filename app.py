@@ -34,7 +34,7 @@ _start_scheduler()
 st.set_page_config(
     page_title="Reddit 内容监控",
     page_icon="📊",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="collapsed",
 )
 
@@ -147,51 +147,90 @@ st.markdown("""
     }
 
     /* Mobile responsive design */
-    @media (max-width: 768px) {
-        /* Adjust main container padding for mobile */
+    @media (max-width: 800px) {
+        /* Main container */
         .main {
-            padding: 10px !important;
+            padding: 12px 8px !important;
+            max-width: 100% !important;
         }
 
-        /* Make metric cards stack on mobile */
+        /* Metric cards */
         [data-testid="metric-container"] {
-            padding: 15px;
-            margin-bottom: 10px;
+            padding: 16px !important;
+            margin-bottom: 12px !important;
         }
 
-        /* Adjust table font size for mobile */
-        table {
-            font-size: 12px;
-        }
-
-        /* Make buttons full width on mobile */
+        /* Buttons */
         .stButton > button {
-            width: 100% !important;
-            padding: 12px 16px !important;
+            padding: 12px !important;
+            font-size: 14px !important;
         }
 
-        /* Adjust title size for mobile */
+        /* Headers */
         h1 {
-            font-size: 24px;
+            font-size: 22px !important;
+            margin-bottom: 16px !important;
         }
 
         h2 {
-            font-size: 18px;
+            font-size: 16px !important;
         }
 
-        /* Stack columns on very small screens */
-        @media (max-width: 480px) {
-            [data-testid="column"] {
-                min-width: 100% !important;
-            }
+        /* Charts - make them responsive */
+        .plotly-graph-div {
+            height: auto !important;
+        }
 
-            h1 {
-                font-size: 20px;
-            }
+        /* Table - reduce font size and padding */
+        table {
+            font-size: 11px !important;
+        }
 
-            .stMetric {
-                padding: 10px 0;
-            }
+        table td, table th {
+            padding: 8px 4px !important;
+        }
+
+        /* Tags */
+        [data-baseweb="tag"] {
+            font-size: 12px !important;
+            padding: 4px 6px !important;
+        }
+
+        /* Dividers */
+        hr {
+            margin: 12px 0 !important;
+        }
+
+        /* Multiselect - single column */
+        [data-testid="column"] {
+            width: 100% !important;
+            min-width: 100% !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .main {
+            padding: 8px 4px !important;
+        }
+
+        h1 {
+            font-size: 18px !important;
+        }
+
+        h2 {
+            font-size: 14px !important;
+        }
+
+        [data-testid="metric-container"] {
+            padding: 12px !important;
+        }
+
+        table {
+            font-size: 10px !important;
+        }
+
+        table td, table th {
+            padding: 6px 2px !important;
         }
     }
 </style>
