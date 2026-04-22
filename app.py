@@ -706,8 +706,8 @@ def main():
     table_html += '<th style="padding: 14px; text-align: center; min-width: 40px; color: white; font-weight: 600;">链接</th>'
     table_html += '<th style="padding: 14px; text-align: center; min-width: 60px; color: white; font-weight: 600;">热度分</th>'
     table_html += '<th style="padding: 14px; text-align: center; min-width: 60px; color: white; font-weight: 600;">情感</th>'
-    table_html += '<th class="hide-mobile" style="padding: 14px; text-align: center; min-width: 80px; color: white; font-weight: 600;">用户类型</th>'
-    table_html += '<th class="hide-mobile" style="padding: 14px; text-align: left; min-width: 300px; color: white; font-weight: 600;">摘要</th>'
+    table_html += '<th style="padding: 14px; text-align: center; min-width: 80px; color: white; font-weight: 600;">用户类型</th>'
+    table_html += '<th style="padding: 14px; text-align: left; min-width: 300px; color: white; font-weight: 600;">摘要</th>'
     table_html += '</tr></thead><tbody>'
 
     for idx, (_, r) in enumerate(filtered.iterrows()):
@@ -729,8 +729,8 @@ def main():
         table_html += f'<td style="padding: 14px; text-align: center;"><a href="{url}" target="_blank" style="color: #8B9DC3; text-decoration: none; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color=\'#9B9DD4\'" onmouseout="this.style.color=\'#8B9DC3\'">🔗</a></td>'
         table_html += f'<td style="padding: 14px; text-align: center; color: #8B9DC3; font-weight: 600;">{score}</td>'
         table_html += f'<td style="padding: 14px; text-align: center; color: {sentiment_color}; font-weight: 600;">{sentiment}</td>'
-        table_html += f'<td class="hide-mobile" style="padding: 14px; text-align: center; color: #4B5563; font-weight: 500;">{user_type}</td>'
-        table_html += f'<td class="hide-mobile" style="padding: 14px; word-break: break-word; line-height: 1.5; white-space: normal; overflow-wrap: break-word; color: #4B5563;">{summary}</td>'
+        table_html += f'<td style="padding: 14px; text-align: center; color: #4B5563; font-weight: 500;">{user_type}</td>'
+        table_html += f'<td style="padding: 14px; word-break: break-word; line-height: 1.5; white-space: normal; overflow-wrap: break-word; color: #4B5563;">{summary}</td>'
         table_html += '</tr>'
 
     table_html += '</tbody></table>'
