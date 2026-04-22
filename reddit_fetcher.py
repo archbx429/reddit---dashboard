@@ -58,22 +58,27 @@ def fetch_subreddit(subreddit: str, category: str = "hot") -> List[dict]:
             data = resp.json()
             posts = data.get("data", {}).get("children", [])
             if posts:
+                print(f"       [尝试 {attempt+1}/{max_retries}] ✅ 成功获取 {len(posts)} 条帖子")
                 return posts
+            else:
+                print(f"       [尝试 {attempt+1}/{max_retries}] ⚠️ 获取 0 条帖子")
+                return []
         except requests.exceptions.HTTPError as e:
-            print(f"[Fetcher] HTTP error for r/{subreddit}/{category} (attempt {attempt+1}): {e}")
+            print(f"       [尝试 {attempt+1}/{max_retries}] ❌ HTTP错误: {e.response.status_code}")
         except requests.exceptions.ConnectionError as e:
-            print(f"[Fetcher] Connection error for r/{subreddit}/{category} (attempt {attempt+1})")
+            print(f"       [尝试 {attempt+1}/{max_retries}] ❌ 连接错误 - 重试中...")
             if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)  # Exponential backoff
+                time.sleep(2 ** attempt)
         except requests.exceptions.Timeout:
-            print(f"[Fetcher] Timeout for r/{subreddit}/{category} (attempt {attempt+1})")
+            print(f"       [尝试 {attempt+1}/{max_retries}] ⏱️  超时 - 重试中...")
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
         except Exception as e:
-            print(f"[Fetcher] Unexpected error for r/{subreddit}/{category} (attempt {attempt+1}): {e}")
+            print(f"       [尝试 {attempt+1}/{max_retries}] ❌ 错误: {str(e)[:80]}")
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
 
+    print(f"       ❌ 最终失败：无法从 r/{subreddit}/{category} 获取数据")
     return []
 
 
@@ -174,17 +179,20 @@ def fetch_all() -> int:
 
     # Reload subreddits list dynamically from database to pick up newly added channels
     current_subreddits = get_all_subreddits(default=DEFAULT_SUBREDDITS)
+    print(f"[Fetcher] 加载的频道列表: {current_subreddits}")
 
     for subreddit in current_subreddits:
         for category in CATEGORIES:
-            print(f"[Fetcher] Fetching r/{subreddit}/{category} ...")
+            print(f"[Fetcher] 正在爬取: r/{subreddit}/{category} ...")
             raw = fetch_subreddit(subreddit, category)
             new_count = process_posts(raw, subreddit, category, fetch_date)
-            print(f"[Fetcher]   → {len(raw)} posts fetched, {new_count} new saved")
+            print(f"[Fetcher]   ✓ 获取 {len(raw)} 条, 保存 {new_count} 条新帖子")
             total_new += new_count
             time.sleep(REQUEST_DELAY)
 
-    print(f"[Fetcher] Done. Total new posts: {total_new}")
+    print(f"[Fetcher] ========== 爬取完成 ==========")
+    print(f"[Fetcher] 总共新增: {total_new} 条帖子")
+    print(f"[Fetcher] 频道数: {len(current_subreddits)}")
     return total_new
 
 
