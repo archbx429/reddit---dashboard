@@ -233,6 +233,19 @@ st.markdown("""
             padding: 6px 2px !important;
         }
     }
+
+    /* Plotly chart toolbar styling */
+    .plotly-graph-div .modebar {
+        background: white !important;
+    }
+
+    .plotly-graph-div .modebar-btn {
+        color: #2D3748 !important;
+    }
+
+    .plotly-graph-div .modebar-btn:hover {
+        background: #F0F3FF !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
