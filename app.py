@@ -34,7 +34,7 @@ _start_scheduler()
 st.set_page_config(
     page_title="Reddit 内容监控",
     page_icon="📊",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed",
 )
 
@@ -245,6 +245,54 @@ st.markdown("""
 
     .plotly-graph-div .modebar-btn:hover {
         background: #F0F3FF !important;
+    }
+
+    /* Table responsive design */
+    .table-wrapper {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    /* Desktop: show all columns */
+    @media (min-width: 1024px) {
+        .hide-mobile {
+            display: table-cell !important;
+        }
+    }
+
+    /* Tablet and Mobile: hide certain columns */
+    @media (max-width: 1023px) {
+        .hide-mobile {
+            display: none !important;
+        }
+
+        table {
+            font-size: 12px !important;
+        }
+
+        table td {
+            padding: 10px !important;
+        }
+
+        table th {
+            padding: 10px !important;
+        }
+    }
+
+    /* Small mobile: further optimize */
+    @media (max-width: 640px) {
+        table {
+            font-size: 11px !important;
+            min-width: 600px !important;
+        }
+
+        table td {
+            padding: 8px !important;
+        }
+
+        table th {
+            padding: 8px !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -631,16 +679,17 @@ def main():
         st.info("无匹配帖子，请调整上方筛选条件。")
         return
 
-    # Build modern styled HTML table
-    table_html = '<table style="width:100%; border-collapse: collapse; font-size: 13px; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #E2E8F0;">'
+    # Build modern styled HTML table with responsive design
+    table_html = '<div class="table-wrapper" style="overflow-x: auto; width: 100%;">'
+    table_html += '<table style="width:100%; border-collapse: collapse; font-size: 13px; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #E2E8F0; min-width: 800px;">'
     table_html += '<thead style="position: sticky; top: 0; background: #1F2937; z-index: 10;"><tr>'
     table_html += '<th style="padding: 14px; text-align: left; min-width: 80px; color: white; font-weight: 600;">频道</th>'
     table_html += '<th style="padding: 14px; text-align: left; min-width: 200px; color: white; font-weight: 600;">标题</th>'
     table_html += '<th style="padding: 14px; text-align: center; min-width: 40px; color: white; font-weight: 600;">链接</th>'
     table_html += '<th style="padding: 14px; text-align: center; min-width: 60px; color: white; font-weight: 600;">热度分</th>'
     table_html += '<th style="padding: 14px; text-align: center; min-width: 60px; color: white; font-weight: 600;">情感</th>'
-    table_html += '<th style="padding: 14px; text-align: center; min-width: 80px; color: white; font-weight: 600;">用户类型</th>'
-    table_html += '<th style="padding: 14px; text-align: left; min-width: 300px; color: white; font-weight: 600;">摘要</th>'
+    table_html += '<th class="hide-mobile" style="padding: 14px; text-align: center; min-width: 80px; color: white; font-weight: 600;">用户类型</th>'
+    table_html += '<th class="hide-mobile" style="padding: 14px; text-align: left; min-width: 300px; color: white; font-weight: 600;">摘要</th>'
     table_html += '</tr></thead><tbody>'
 
     for idx, (_, r) in enumerate(filtered.iterrows()):
@@ -662,11 +711,12 @@ def main():
         table_html += f'<td style="padding: 14px; text-align: center;"><a href="{url}" target="_blank" style="color: #8B9DC3; text-decoration: none; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color=\'#9B9DD4\'" onmouseout="this.style.color=\'#8B9DC3\'">🔗</a></td>'
         table_html += f'<td style="padding: 14px; text-align: center; color: #8B9DC3; font-weight: 600;">{score}</td>'
         table_html += f'<td style="padding: 14px; text-align: center; color: {sentiment_color}; font-weight: 600;">{sentiment}</td>'
-        table_html += f'<td style="padding: 14px; text-align: center; color: #4B5563; font-weight: 500;">{user_type}</td>'
-        table_html += f'<td style="padding: 14px; word-break: break-word; line-height: 1.5; white-space: normal; overflow-wrap: break-word; color: #4B5563;">{summary}</td>'
+        table_html += f'<td class="hide-mobile" style="padding: 14px; text-align: center; color: #4B5563; font-weight: 500;">{user_type}</td>'
+        table_html += f'<td class="hide-mobile" style="padding: 14px; word-break: break-word; line-height: 1.5; white-space: normal; overflow-wrap: break-word; color: #4B5563;">{summary}</td>'
         table_html += '</tr>'
 
     table_html += '</tbody></table>'
+    table_html += '</div>'
 
     st.write(table_html, unsafe_allow_html=True)
     st.caption(f"共显示 {len(filtered)} 条帖子，按热度分降序排列")
