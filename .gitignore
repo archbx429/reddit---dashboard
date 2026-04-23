@@ -1,4 +1,4 @@
-subreddit_config.json
+reddit_monitor.db
 *.pyc
 __pycache__/
 .env

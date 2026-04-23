@@ -222,22 +222,10 @@ def get_available_dates() -> List[str]:
 
 
 def get_all_subreddits(default: Optional[List[str]] = None) -> List[str]:
-    """Get all subreddits from database (priority) or config file; return defaults if empty."""
+    """Get all subreddits from config file (version-controlled source of truth)."""
     import os
 
-    # Priority 1: Load from database (most up-to-date, always reflects recent adds)
-    try:
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM subreddits ORDER BY added_at DESC")
-            subs = [row["name"] for row in cursor.fetchall()]
-            if subs:
-                print(f"[DB] Loaded {len(subs)} subreddits from database")
-                return subs
-    except Exception as e:
-        print(f"[DB] Error fetching subreddits: {e}")
-
-    # Priority 2: Fallback to config file (JSON) - for initial setup
+    # Priority 1: Load from config file (version-controlled, auto-updated on GitHub)
     config_file = "subreddit_config.json"
     if os.path.exists(config_file):
         try:
@@ -250,30 +238,29 @@ def get_all_subreddits(default: Optional[List[str]] = None) -> List[str]:
         except Exception as e:
             print(f"[Config] Error reading config file: {e}")
 
+    # Priority 2: Fallback to database (for backward compatibility)
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM subreddits ORDER BY added_at DESC")
+            subs = [row["name"] for row in cursor.fetchall()]
+            if subs:
+                print(f"[DB] Loaded {len(subs)} subreddits from database (fallback)")
+                return subs
+    except Exception as e:
+        print(f"[DB] Error fetching subreddits: {e}")
+
     return default or []
 
 
 def add_subreddit(name: str) -> bool:
-    """Add a new subreddit to both database and config file."""
+    """Add a new subreddit to config file and auto-commit to GitHub for persistence."""
     import os
+    import subprocess
 
     success = False
 
-    # Save to database
-    try:
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT OR IGNORE INTO subreddits (name, added_at) VALUES (?, ?)",
-                (name, datetime.now().isoformat())
-            )
-            conn.commit()
-            success = cursor.rowcount > 0
-            print(f"[DB] Added subreddit to database: {name}")
-    except Exception as e:
-        print(f"[DB] Error adding subreddit to database: {e}")
-
-    # Save to config file (for persistence on Streamlit Cloud)
+    # Save to config file (primary source of truth for Streamlit Cloud)
     try:
         config_file = "subreddit_config.json"
         subs = []
@@ -291,6 +278,20 @@ def add_subreddit(name: str) -> bool:
                 json.dump({"subreddits": subs}, f, indent=2)
             print(f"[Config] Added subreddit to config file: {name}")
             success = True
+
+            # Auto-commit to GitHub for persistence on Streamlit Cloud
+            try:
+                subprocess.run(["git", "add", config_file], check=True, capture_output=True)
+                subprocess.run(
+                    ["git", "commit", "-m", f"Add {name} subreddit to config\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"],
+                    check=True,
+                    capture_output=True
+                )
+                subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True)
+                print(f"[Git] Successfully committed {name} to GitHub")
+            except subprocess.CalledProcessError as e:
+                print(f"[Git] Warning: Could not auto-commit to GitHub: {e}")
+                # Still consider it success since config file was updated locally
         else:
             print(f"[Config] Subreddit already in config: {name}")
 
