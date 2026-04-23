@@ -4,7 +4,7 @@
     "EufyMakeOfficial",
     "snapmaker",
     "3Dprinting",
-    "prusa3d"
-  ],
-  "note": "Add your subreddit names here and commit to persist changes on Streamlit Cloud"
+    "prusa3d",
+    "testchannel"
+  ]
 }
