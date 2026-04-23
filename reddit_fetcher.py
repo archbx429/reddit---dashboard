@@ -168,17 +168,25 @@ def process_posts(
     return saved
 
 
-def fetch_all() -> int:
+def fetch_all(subreddits: List[str] = None) -> int:
     """
     Iterate over all (subreddit, category) combinations, fetch posts and store them.
-    Returns the total number of newly inserted posts.
+
+    Args:
+        subreddits: Optional list of subreddit names to fetch. If None, loads from config.
+
+    Returns:
+        The total number of newly inserted posts.
     """
     init_db()
     fetch_date = datetime.now().strftime("%Y-%m-%d")
     total_new = 0
 
-    # Reload subreddits list dynamically from database to pick up newly added channels
-    current_subreddits = get_all_subreddits(default=DEFAULT_SUBREDDITS)
+    # Use provided subreddits list or reload from config
+    if subreddits is None:
+        current_subreddits = get_all_subreddits(default=DEFAULT_SUBREDDITS)
+    else:
+        current_subreddits = subreddits
     print(f"[Fetcher] 加载的频道列表: {current_subreddits}")
 
     for subreddit in current_subreddits:

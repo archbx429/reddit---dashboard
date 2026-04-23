@@ -402,14 +402,15 @@ def main():
         )
 
     if trigger:
-        # Reload subreddit list to pick up newly added channels
-        global ALL_SUBREDDITS
-        ALL_SUBREDDITS = get_all_subreddits(default=DEFAULT_SUBREDDITS)
+        # Use current session state channels (includes newly added ones)
+        current_channels = st.session_state.all_subreddits
 
         with st.status("正在执行抓取与分析 ...", expanded=True) as status:
             st.write("⏳ 正在抓取 Reddit 帖子 ...")
+            st.write(f"📌 正在爬取 {len(current_channels)} 个频道: {', '.join(current_channels)}")
             try:
-                fetched = fetch_all()
+                # Pass current channels to fetch_all so newly added channels are included
+                fetched = fetch_all(subreddits=current_channels)
                 st.write(f"✅ 抓取完成：新增 **{fetched}** 条帖子")
             except Exception as exc:
                 st.write(f"❌ 抓取出错：{exc}")
