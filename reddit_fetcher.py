@@ -182,21 +182,31 @@ def fetch_all(subreddits: List[str] = None) -> int:
     fetch_date = datetime.now().strftime("%Y-%m-%d")
     total_new = 0
 
-    # Use provided subreddits list or reload from config
+    # Use provided subreddits list (passed from app.py session state) or reload from config
     if subreddits is None:
         current_subreddits = get_all_subreddits(default=DEFAULT_SUBREDDITS)
+        print(f"[Fetcher] 从配置文件加载频道列表: {current_subreddits}")
     else:
         current_subreddits = subreddits
-    print(f"[Fetcher] 加载的频道列表: {current_subreddits}")
+        print(f"[Fetcher] 使用传入的频道列表: {current_subreddits}")
+
+    print(f"[Fetcher] ========== 开始爬取 ==========")
+    print(f"[Fetcher] 频道总数: {len(current_subreddits)}")
+    print(f"[Fetcher] 频道列表: {current_subreddits}")
 
     for subreddit in current_subreddits:
+        print(f"[Fetcher] ──────── 开始爬取频道: {subreddit} ────────")
         for category in CATEGORIES:
             print(f"[Fetcher] 正在爬取: r/{subreddit}/{category} ...")
-            raw = fetch_subreddit(subreddit, category)
-            new_count = process_posts(raw, subreddit, category, fetch_date)
-            print(f"[Fetcher]   ✓ 获取 {len(raw)} 条, 保存 {new_count} 条新帖子")
-            total_new += new_count
+            try:
+                raw = fetch_subreddit(subreddit, category)
+                new_count = process_posts(raw, subreddit, category, fetch_date)
+                print(f"[Fetcher]   ✓ 获取 {len(raw)} 条, 保存 {new_count} 条新帖子")
+                total_new += new_count
+            except Exception as e:
+                print(f"[Fetcher]   ❌ 爬取失败: {e}")
             time.sleep(REQUEST_DELAY)
+        print(f"[Fetcher] ──────── {subreddit} 爬取完成 ────────")
 
     print(f"[Fetcher] ========== 爬取完成 ==========")
     print(f"[Fetcher] 总共新增: {total_new} 条帖子")
