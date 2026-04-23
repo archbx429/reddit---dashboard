@@ -575,6 +575,61 @@ def main():
                 st.success("✅ 已从 subreddit_config.json 重新加载")
                 st.rerun()
 
+        # ── Data flow diagnosis ──────────────────────────────────────────
+        st.divider()
+        with st.expander("📊 爬取&存储诊断（查看数据流）"):
+            st.markdown("**检查爬取和存储的整个数据流**")
+
+            try:
+                import sqlite3
+                conn = sqlite3.connect("reddit_monitor.db")
+                cursor = conn.cursor()
+
+                # Get data by subreddit
+                cursor.execute("""
+                    SELECT subreddit, COUNT(*) as count FROM posts
+                    GROUP BY subreddit ORDER BY count DESC
+                """)
+                db_data = cursor.fetchall()
+                conn.close()
+
+                col_db1, col_db2 = st.columns(2)
+
+                with col_db1:
+                    st.markdown("**📌 前端请求的频道列表：**")
+                    st.code(str(st.session_state.all_subreddits), language="python")
+                    st.caption(f"共 {len(st.session_state.all_subreddits)} 个频道")
+
+                with col_db2:
+                    st.markdown("**💾 数据库中有数据的频道：**")
+                    db_subreddits = {name: count for name, count in db_data}
+                    st.code(str(db_subreddits), language="python")
+                    st.caption(f"共 {len(db_subreddits)} 个频道，{sum(dict(db_data).values())} 条帖子")
+
+                # Detect missing channels
+                st.markdown("**🔍 数据对比：**")
+                session_set = set(st.session_state.all_subreddits)
+                db_set = set([name for name, _ in db_data])
+
+                missing_from_db = session_set - db_set
+                extra_in_db = db_set - session_set
+
+                if missing_from_db:
+                    st.error(f"❌ 前端有但数据库没有（未爬取或爬取失败）: {list(missing_from_db)}")
+                if extra_in_db:
+                    st.info(f"ℹ️ 数据库有但前端没有（已删除的频道）: {list(extra_in_db)}")
+
+                if not missing_from_db and not extra_in_db:
+                    st.success("✅ 所有频道的数据都在数据库中")
+
+                # Show detailed post counts
+                st.markdown("**📈 各频道的帖子数：**")
+                for subreddit, count in db_data:
+                    st.text(f"  {subreddit}: {count} 条")
+
+            except Exception as e:
+                st.error(f"❌ 诊断失败: {e}")
+
     # ── Filter row ───────────────────────────────────────────────────────────
     dates = get_available_dates()
 
