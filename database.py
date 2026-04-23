@@ -264,6 +264,7 @@ def add_subreddit(name: str) -> tuple:
     import subprocess
     import threading
     import sys
+    import time as time_module
 
     success = False
     message = ""
@@ -291,17 +292,31 @@ def add_subreddit(name: str) -> tuple:
             subs.append(name)
             print(f"[Config] → 内存中的列表已更新: {subs}", file=sys.stderr)
 
-            # Write to file
-            try:
-                with open(config_file, "w") as f:
-                    json.dump({"subreddits": subs}, f, indent=2)
-                print(f"[Config] ✓ 写入完成", file=sys.stderr)
-            except Exception as write_error:
-                print(f"[Config] ❌ 写入失败: {write_error}", file=sys.stderr)
-                raise
+            # Write to file with multiple attempts
+            max_write_attempts = 3
+            write_success = False
+            last_write_error = None
+
+            for attempt in range(max_write_attempts):
+                try:
+                    with open(config_file, "w") as f:
+                        json.dump({"subreddits": subs}, f, indent=2, ensure_ascii=False)
+                    print(f"[Config] ✓ 写入完成（第 {attempt+1} 次尝试）", file=sys.stderr)
+                    write_success = True
+                    break
+                except Exception as write_error:
+                    last_write_error = write_error
+                    print(f"[Config] ⚠️ 写入失败（第 {attempt+1} 次）: {write_error}", file=sys.stderr)
+                    time_module.sleep(0.1)
+
+            if not write_success:
+                print(f"[Config] ❌ 多次写入尝试都失败了", file=sys.stderr)
+                raise Exception(f"文件写入失败: {last_write_error}")
 
             # Verify write was successful
             print(f"[Config] → 验证写入...", file=sys.stderr)
+            time_module.sleep(0.1)  # 等待文件系统同步
+
             try:
                 with open(config_file, "r") as f:
                     verify_data = json.load(f)
