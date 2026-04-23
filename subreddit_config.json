@@ -3,7 +3,8 @@
     "bambulab",
     "EufyMakeOfficial",
     "snapmaker",
-    "3Dprinting"
+    "3Dprinting",
+    "prusa3d"
   ],
   "note": "Add your subreddit names here and commit to persist changes on Streamlit Cloud"
 }
