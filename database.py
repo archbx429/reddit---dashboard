@@ -268,36 +268,52 @@ def add_subreddit(name: str) -> tuple:
     success = False
     message = ""
 
-    # Save to config file (primary source of truth for Streamlit Cloud)
     try:
         config_file = "subreddit_config.json"
         subs = []
+
+        print(f"[Config] ========== 开始添加频道: {name} ==========", file=sys.stderr)
+        print(f"[Config] 工作目录: {os.getcwd()}", file=sys.stderr)
+        print(f"[Config] 配置文件路径: {os.path.abspath(config_file)}", file=sys.stderr)
 
         # Read existing
         if os.path.exists(config_file):
             with open(config_file, "r") as f:
                 data = json.load(f)
                 subs = data.get("subreddits", [])
-            print(f"[Config] 当前配置文件中有 {len(subs)} 个频道", file=sys.stderr)
+            print(f"[Config] ✓ 读取成功，当前有 {len(subs)} 个频道: {subs}", file=sys.stderr)
         else:
-            print(f"[Config] 配置文件不存在，创建新文件", file=sys.stderr)
+            print(f"[Config] ⚠️ 配置文件不存在，将创建新文件", file=sys.stderr)
 
         # Add new if not exists (case-insensitive check)
         if name.lower() not in [s.lower() for s in subs]:
+            print(f"[Config] → 频道不存在，准备添加...", file=sys.stderr)
             subs.append(name)
+            print(f"[Config] → 内存中的列表已更新: {subs}", file=sys.stderr)
 
-            # Write to file with explicit flush
-            with open(config_file, "w") as f:
-                json.dump({"subreddits": subs}, f, indent=2)
+            # Write to file
+            try:
+                with open(config_file, "w") as f:
+                    json.dump({"subreddits": subs}, f, indent=2)
+                print(f"[Config] ✓ 写入完成", file=sys.stderr)
+            except Exception as write_error:
+                print(f"[Config] ❌ 写入失败: {write_error}", file=sys.stderr)
+                raise
 
             # Verify write was successful
-            with open(config_file, "r") as f:
-                verify_data = json.load(f)
-                verify_subs = verify_data.get("subreddits", [])
+            print(f"[Config] → 验证写入...", file=sys.stderr)
+            try:
+                with open(config_file, "r") as f:
+                    verify_data = json.load(f)
+                    verify_subs = verify_data.get("subreddits", [])
+                print(f"[Config] ✓ 验证读取成功: {verify_subs}", file=sys.stderr)
+            except Exception as verify_error:
+                print(f"[Config] ❌ 验证读取失败: {verify_error}", file=sys.stderr)
+                raise
 
+            # Check if new subreddit is in the verified list
             if name in verify_subs:
-                print(f"[Config] ✅ 成功添加 {name} 到配置文件", file=sys.stderr)
-                print(f"[Config] 配置文件现已包含 {len(verify_subs)} 个频道: {verify_subs}", file=sys.stderr)
+                print(f"[Config] ✅ 验证通过: {name} 确实在文件中", file=sys.stderr)
                 success = True
                 message = f"✅ {name} 已添加到配置文件"
 
@@ -317,16 +333,22 @@ def add_subreddit(name: str) -> tuple:
                 git_thread = threading.Thread(target=git_commit_async, daemon=True)
                 git_thread.start()
             else:
-                print(f"[Config] ❌ 写入验证失败：{name} 未在文件中找到", file=sys.stderr)
-                message = f"❌ 添加失败：文件写入验证失败"
+                print(f"[Config] ❌ 验证失败: {name} 不在验证读取的列表中", file=sys.stderr)
+                print(f"[Config] 预期列表: {verify_subs}", file=sys.stderr)
+                success = False
+                message = f"❌ 添加失败：写入验证失败，请检查日志"
         else:
             print(f"[Config] ⚠️ {name} 已存在于配置文件中", file=sys.stderr)
             message = f"⚠️ {name} 已经存在"
 
     except Exception as e:
-        print(f"[Config] ❌ 错误: {e}", file=sys.stderr)
+        print(f"[Config] ❌ 异常: {type(e).__name__}: {e}", file=sys.stderr)
+        import traceback
+        print(f"[Config] 堆栈跟踪: {traceback.format_exc()}", file=sys.stderr)
         message = f"❌ 错误: {str(e)}"
 
+    print(f"[Config] 最终结果: success={success}, message={message}", file=sys.stderr)
+    print(f"[Config] ========== 添加流程结束 ==========", file=sys.stderr)
     return success, message
 
 

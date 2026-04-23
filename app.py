@@ -444,36 +444,104 @@ def main():
             # Check if already exists (case-insensitive)
             existing_names = [s.lower() for s in st.session_state.all_subreddits]
             if subreddit_name.lower() not in existing_names:
-                success, message = add_subreddit(subreddit_name)
-                if success:
-                    # Update session state immediately (for current session)
-                    st.session_state.all_subreddits.append(subreddit_name)
+                with st.status(f"正在添加频道: {subreddit_name}...", expanded=True) as status:
+                    st.write("⏳ 正在写入配置文件...")
+                    success, message = add_subreddit(subreddit_name)
 
-                    # Detailed success feedback
-                    st.success(f"✅ 成功添加频道: **{subreddit_name}**")
-                    with st.expander("📌 工作流说明（点击展开）"):
-                        st.markdown(f"""
-                        **已完成：**
-                        1. ✅ **{subreddit_name}** 已写入配置文件
-                        2. ✅ 已添加到当前会话
-                        3. 📡 Git 同步在后台进行（不会阻塞你的操作）
+                    if success:
+                        st.write(f"✅ 配置文件已更新")
+                        st.write(f"⏳ 更新会话状态...")
+                        # Update session state immediately (for current session)
+                        st.session_state.all_subreddits.append(subreddit_name)
+                        st.write(f"✅ 会话已更新")
+                        status.update(label="✅ 添加成功！", state="complete")
 
-                        **接下来：**
-                        1. 点击右上角【开始爬取】按钮
-                        2. 系统会自动爬取 **{subreddit_name}** 的内容
-                        3. 爬取完成后自动进行 AI 分析
-                        4. 数据会立即显示在仪表盘上
+                        st.success(f"✅ 成功添加频道: **{subreddit_name}**")
+                        with st.expander("📌 工作流说明（点击展开）"):
+                            st.markdown(f"""
+                            **已完成：**
+                            1. ✅ **{subreddit_name}** 已写入配置文件
+                            2. ✅ 已添加到当前会话
+                            3. 📡 Git 同步在后台进行（不会阻塞你的操作）
 
-                        **预期：** 等待 3-5 分钟让爬取和分析完成
-                        """)
-                else:
-                    st.error(f"❌ 添加频道失败")
-                    st.warning(f"错误信息: {message}")
+                            **接下来：**
+                            1. 点击右上角【开始爬取】按钮
+                            2. 系统会自动爬取 **{subreddit_name}** 的内容
+                            3. 爬取完成后自动进行 AI 分析
+                            4. 数据会立即显示在仪表盘上
+
+                            **预期：** 等待 3-5 分钟让爬取和分析完成
+                            """)
+                    else:
+                        st.write(f"❌ 配置文件写入失败或验证失败")
+                        st.write(f"错误信息: {message}")
+                        status.update(label="❌ 添加失败", state="error")
+
+                        st.error(f"❌ 添加频道失败: {subreddit_name}")
+                        with st.expander("🔧 诊断信息（点击展开）"):
+                            st.markdown(f"""
+                            **问题排查：**
+                            1. 检查浏览器控制台和服务器日志中的详细信息
+                            2. 验证 subreddit_config.json 文件是否存在并可写
+                            3. 检查文件权限和磁盘空间
+
+                            **错误详情：**
+                            ```
+                            {message}
+                            ```
+                            """)
             else:
                 st.warning(f"⚠️ 频道 **{subreddit_name}** 已存在")
 
         st.caption(f"当前频道数: {len(ALL_SUBREDDITS)}")
         st.write("**已有频道：**", ", ".join(ALL_SUBREDDITS))
+
+        # ── Debugging section ────────────────────────────────────────────
+        st.divider()
+        with st.expander("🔧 配置诊断工具（排查问题用）"):
+            st.markdown("**检查前端 vs 文件的频道列表是否一致**")
+
+            col_debug1, col_debug2 = st.columns(2)
+
+            with col_debug1:
+                st.markdown("**📱 前端 (Session State)：**")
+                st.code(str(st.session_state.all_subreddits), language="python")
+
+            with col_debug2:
+                st.markdown("**💾 文件 (subreddit_config.json)：**")
+                try:
+                    import json as json_module
+                    with open("subreddit_config.json", "r") as f:
+                        file_subs = json_module.load(f).get("subreddits", [])
+                    st.code(str(file_subs), language="python")
+                except Exception as e:
+                    st.error(f"❌ 无法读取文件: {e}")
+
+            # Check for discrepancies
+            try:
+                file_subs_set = set(file_subs) if 'file_subs' in locals() else set()
+                session_subs_set = set(st.session_state.all_subreddits)
+
+                if file_subs_set == session_subs_set:
+                    st.success("✅ 前端和文件完全一致")
+                else:
+                    st.warning("⚠️ 检测到不一致！")
+
+                    only_in_session = session_subs_set - file_subs_set
+                    only_in_file = file_subs_set - session_subs_set
+
+                    if only_in_session:
+                        st.error(f"❌ 只在前端存在（未保存到文件）: {list(only_in_session)}")
+                    if only_in_file:
+                        st.info(f"ℹ️ 只在文件存在（前端未加载）: {list(only_in_file)}")
+            except Exception as e:
+                st.error(f"❌ 比较失败: {e}")
+
+            # Manual file refresh button
+            if st.button("🔄 从文件重新加载频道列表"):
+                st.session_state.all_subreddits = get_all_subreddits(default=DEFAULT_SUBREDDITS)
+                st.success("✅ 已从 subreddit_config.json 重新加载")
+                st.rerun()
 
     # ── Filter row ───────────────────────────────────────────────────────────
     dates = get_available_dates()
