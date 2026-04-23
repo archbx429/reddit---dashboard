@@ -444,14 +444,31 @@ def main():
             # Check if already exists (case-insensitive)
             existing_names = [s.lower() for s in st.session_state.all_subreddits]
             if subreddit_name.lower() not in existing_names:
-                success, git_synced = add_subreddit(subreddit_name)
+                success, message = add_subreddit(subreddit_name)
                 if success:
                     # Update session state immediately (for current session)
                     st.session_state.all_subreddits.append(subreddit_name)
+
+                    # Detailed success feedback
                     st.success(f"✅ 成功添加频道: **{subreddit_name}**")
-                    st.info(f"✨ 新频道已立即可用！你可以现在点击【开始爬取】来爬取这个频道的内容。\n\n📌 Git 同步在后台进行中（通常几秒钟完成），这不会影响你的操作。")
+                    with st.expander("📌 工作流说明（点击展开）"):
+                        st.markdown(f"""
+                        **已完成：**
+                        1. ✅ **{subreddit_name}** 已写入配置文件
+                        2. ✅ 已添加到当前会话
+                        3. 📡 Git 同步在后台进行（不会阻塞你的操作）
+
+                        **接下来：**
+                        1. 点击右上角【开始爬取】按钮
+                        2. 系统会自动爬取 **{subreddit_name}** 的内容
+                        3. 爬取完成后自动进行 AI 分析
+                        4. 数据会立即显示在仪表盘上
+
+                        **预期：** 等待 3-5 分钟让爬取和分析完成
+                        """)
                 else:
-                    st.error(f"❌ 添加频道失败，请检查频道名是否正确")
+                    st.error(f"❌ 添加频道失败")
+                    st.warning(f"错误信息: {message}")
             else:
                 st.warning(f"⚠️ 频道 **{subreddit_name}** 已存在")
 

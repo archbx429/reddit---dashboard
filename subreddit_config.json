@@ -5,6 +5,7 @@
     "snapmaker",
     "3Dprinting",
     "prusa3d",
-    "ender3"
+    "ender3",
+    "functionalprint"
   ]
 }

@@ -256,16 +256,17 @@ def get_all_subreddits(default: Optional[List[str]] = None) -> List[str]:
 def add_subreddit(name: str) -> tuple:
     """Add a new subreddit to config file and attempt to auto-commit to GitHub.
 
-    Returns: (success: bool, git_synced: bool)
+    Returns: (success: bool, message: str)
     - success: Whether the subreddit was added locally
-    - git_synced: Whether it was synced to GitHub
+    - message: Detailed status message for user feedback
     """
     import os
     import subprocess
     import threading
+    import sys
 
     success = False
-    git_synced = False
+    message = ""
 
     # Save to config file (primary source of truth for Streamlit Cloud)
     try:
@@ -277,38 +278,56 @@ def add_subreddit(name: str) -> tuple:
             with open(config_file, "r") as f:
                 data = json.load(f)
                 subs = data.get("subreddits", [])
+            print(f"[Config] 当前配置文件中有 {len(subs)} 个频道", file=sys.stderr)
+        else:
+            print(f"[Config] 配置文件不存在，创建新文件", file=sys.stderr)
 
-        # Add new if not exists
-        if name not in subs:
+        # Add new if not exists (case-insensitive check)
+        if name.lower() not in [s.lower() for s in subs]:
             subs.append(name)
+
+            # Write to file with explicit flush
             with open(config_file, "w") as f:
                 json.dump({"subreddits": subs}, f, indent=2)
-            print(f"[Config] Added subreddit to config file: {name}")
-            success = True
 
-            # Auto-commit to GitHub for persistence on Streamlit Cloud
-            def git_commit_async():
-                try:
-                    subprocess.run(["git", "add", config_file], capture_output=True, text=True, timeout=5)
-                    subprocess.run(
-                        ["git", "commit", "-m", f"Add {name} subreddit to config\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"],
-                        capture_output=True, text=True, timeout=10
-                    )
-                    subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, timeout=10)
-                    print(f"[Git] Successfully committed {name} to GitHub")
-                except Exception as git_error:
-                    print(f"[Git] Warning: Could not auto-commit to GitHub: {git_error}")
+            # Verify write was successful
+            with open(config_file, "r") as f:
+                verify_data = json.load(f)
+                verify_subs = verify_data.get("subreddits", [])
 
-            # Run git commit in background thread (doesn't block user)
-            git_thread = threading.Thread(target=git_commit_async, daemon=True)
-            git_thread.start()
+            if name in verify_subs:
+                print(f"[Config] ✅ 成功添加 {name} 到配置文件", file=sys.stderr)
+                print(f"[Config] 配置文件现已包含 {len(verify_subs)} 个频道: {verify_subs}", file=sys.stderr)
+                success = True
+                message = f"✅ {name} 已添加到配置文件"
+
+                # Auto-commit to GitHub in background (doesn't block)
+                def git_commit_async():
+                    try:
+                        subprocess.run(["git", "add", config_file], capture_output=True, text=True, timeout=5)
+                        subprocess.run(
+                            ["git", "commit", "-m", f"Add {name} subreddit to config\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"],
+                            capture_output=True, text=True, timeout=10
+                        )
+                        subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, timeout=10)
+                        print(f"[Git] ✅ 成功提交 {name} 到 GitHub", file=sys.stderr)
+                    except Exception as git_error:
+                        print(f"[Git] ⚠️ Git 提交失败（但本地配置已保存）: {git_error}", file=sys.stderr)
+
+                git_thread = threading.Thread(target=git_commit_async, daemon=True)
+                git_thread.start()
+            else:
+                print(f"[Config] ❌ 写入验证失败：{name} 未在文件中找到", file=sys.stderr)
+                message = f"❌ 添加失败：文件写入验证失败"
         else:
-            print(f"[Config] Subreddit already in config: {name}")
+            print(f"[Config] ⚠️ {name} 已存在于配置文件中", file=sys.stderr)
+            message = f"⚠️ {name} 已经存在"
 
     except Exception as e:
-        print(f"[Config] Error adding to config file: {e}")
+        print(f"[Config] ❌ 错误: {e}", file=sys.stderr)
+        message = f"❌ 错误: {str(e)}"
 
-    return success, git_synced
+    return success, message
 
 
 def init_default_subreddits(defaults: List[str]) -> None:
