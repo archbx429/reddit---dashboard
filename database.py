@@ -222,10 +222,22 @@ def get_available_dates() -> List[str]:
 
 
 def get_all_subreddits(default: Optional[List[str]] = None) -> List[str]:
-    """Get all subreddits from config file or database; return defaults if empty."""
+    """Get all subreddits from database (priority) or config file; return defaults if empty."""
     import os
 
-    # First try to load from config file (JSON) - this persists on Streamlit Cloud
+    # Priority 1: Load from database (most up-to-date, always reflects recent adds)
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM subreddits ORDER BY added_at DESC")
+            subs = [row["name"] for row in cursor.fetchall()]
+            if subs:
+                print(f"[DB] Loaded {len(subs)} subreddits from database")
+                return subs
+    except Exception as e:
+        print(f"[DB] Error fetching subreddits: {e}")
+
+    # Priority 2: Fallback to config file (JSON) - for initial setup
     config_file = "subreddit_config.json"
     if os.path.exists(config_file):
         try:
@@ -237,17 +249,6 @@ def get_all_subreddits(default: Optional[List[str]] = None) -> List[str]:
                     return subs
         except Exception as e:
             print(f"[Config] Error reading config file: {e}")
-
-    # Fallback to database
-    try:
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM subreddits ORDER BY added_at DESC")
-            subs = [row["name"] for row in cursor.fetchall()]
-            if subs:
-                return subs
-    except Exception as e:
-        print(f"[DB] Error fetching subreddits: {e}")
 
     return default or []
 
