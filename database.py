@@ -355,6 +355,101 @@ def add_subreddit(name: str) -> tuple:
     return success, message
 
 
+def delete_subreddit(name: str) -> tuple:
+    """Delete a subreddit from config file.
+
+    Returns: (success: bool, message: str)
+    """
+    import os
+    import subprocess
+    import threading
+    import sys
+
+    success = False
+    message = ""
+
+    try:
+        config_file = "subreddit_config.json"
+
+        print(f"[Config] ========== 开始删除频道: {name} ==========", file=sys.stderr)
+
+        # Read existing
+        if os.path.exists(config_file):
+            with open(config_file, "r") as f:
+                data = json.load(f)
+                subs = data.get("subreddits", [])
+            print(f"[Config] ✓ 读取成功，当前有 {len(subs)} 个频道", file=sys.stderr)
+        else:
+            print(f"[Config] ❌ 配置文件不存在", file=sys.stderr)
+            message = "❌ 错误: 配置文件不存在"
+            return False, message
+
+        # Remove if exists (case-insensitive check)
+        if name.lower() in [s.lower() for s in subs]:
+            print(f"[Config] → 频道存在，准备删除...", file=sys.stderr)
+            subs = [s for s in subs if s.lower() != name.lower()]
+            print(f"[Config] → 内存中的列表已更新: {subs}", file=sys.stderr)
+
+            # Write to file
+            try:
+                with open(config_file, "w") as f:
+                    json.dump({"subreddits": subs}, f, indent=2)
+                print(f"[Config] ✓ 写入完成", file=sys.stderr)
+            except Exception as write_error:
+                print(f"[Config] ❌ 写入失败: {write_error}", file=sys.stderr)
+                raise
+
+            # Verify deletion
+            print(f"[Config] → 验证删除...", file=sys.stderr)
+            try:
+                with open(config_file, "r") as f:
+                    verify_data = json.load(f)
+                    verify_subs = verify_data.get("subreddits", [])
+                print(f"[Config] ✓ 验证读取成功: {verify_subs}", file=sys.stderr)
+            except Exception as verify_error:
+                print(f"[Config] ❌ 验证读取失败: {verify_error}", file=sys.stderr)
+                raise
+
+            # Check if subreddit is really deleted
+            if name.lower() not in [s.lower() for s in verify_subs]:
+                print(f"[Config] ✅ 验证通过: {name} 已被删除", file=sys.stderr)
+                success = True
+                message = f"✅ {name} 已从配置文件删除"
+
+                # Auto-commit to GitHub in background
+                def git_commit_async():
+                    try:
+                        subprocess.run(["git", "add", config_file], capture_output=True, text=True, timeout=5)
+                        subprocess.run(
+                            ["git", "commit", "-m", f"Remove {name} subreddit from config\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"],
+                            capture_output=True, text=True, timeout=10
+                        )
+                        subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, timeout=10)
+                        print(f"[Git] ✅ 成功提交删除 {name} 到 GitHub", file=sys.stderr)
+                    except Exception as git_error:
+                        print(f"[Git] ⚠️ Git 提交失败（但本地配置已保存）: {git_error}", file=sys.stderr)
+
+                git_thread = threading.Thread(target=git_commit_async, daemon=True)
+                git_thread.start()
+            else:
+                print(f"[Config] ❌ 验证失败: {name} 仍在列表中", file=sys.stderr)
+                success = False
+                message = f"❌ 删除失败：验证出错"
+        else:
+            print(f"[Config] ⚠️ {name} 不在配置文件中", file=sys.stderr)
+            message = f"⚠️ {name} 不在频道列表中"
+
+    except Exception as e:
+        print(f"[Config] ❌ 异常: {type(e).__name__}: {e}", file=sys.stderr)
+        import traceback
+        print(f"[Config] 堆栈跟踪: {traceback.format_exc()}", file=sys.stderr)
+        message = f"❌ 错误: {str(e)}"
+
+    print(f"[Config] 最终结果: success={success}, message={message}", file=sys.stderr)
+    print(f"[Config] ========== 删除流程结束 ==========", file=sys.stderr)
+    return success, message
+
+
 def init_default_subreddits(defaults: List[str]) -> None:
     """Initialize database with default subreddits if table is empty."""
     try:

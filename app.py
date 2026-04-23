@@ -18,6 +18,7 @@ from database import (
     init_db,
     get_all_subreddits,
     add_subreddit,
+    delete_subreddit,
     init_default_subreddits,
 )
 from reddit_fetcher import fetch_all
@@ -494,6 +495,37 @@ def main():
                 st.warning(f"⚠️ 频道 **{subreddit_name}** 已存在")
 
         st.caption(f"当前频道数: {len(ALL_SUBREDDITS)}")
+
+        # ── Delete channel section ────────────────────────────────────────
+        with st.expander("🗑️ 删除频道"):
+            st.markdown("**选择要删除的频道：**")
+
+            cols = st.columns(len(ALL_SUBREDDITS))
+            for idx, channel in enumerate(ALL_SUBREDDITS):
+                with cols[idx]:
+                    if st.button(f"❌ {channel}", key=f"delete_{channel}", use_container_width=True):
+                        with st.status(f"正在删除 {channel}...", expanded=True) as status:
+                            st.write(f"⏳ 正在从配置文件删除...")
+                            success, message = delete_subreddit(channel)
+
+                            if success:
+                                st.write(f"✅ 配置文件已更新")
+                                st.write(f"⏳ 更新会话状态...")
+                                # Remove from session state
+                                st.session_state.all_subreddits = [s for s in st.session_state.all_subreddits if s.lower() != channel.lower()]
+                                st.write(f"✅ 会话已更新")
+                                status.update(label="✅ 删除成功！", state="complete")
+
+                                st.success(f"✅ 成功删除频道: **{channel}**")
+                                st.info("📌 Streamlit Cloud 会自动同步这个改动")
+                            else:
+                                st.write(f"❌ 删除失败")
+                                status.update(label="❌ 删除失败", state="error")
+                                st.error(f"❌ 删除频道失败: {channel}")
+                                st.warning(f"错误信息: {message}")
+
+                        st.rerun()
+
         st.write("**已有频道：**", ", ".join(ALL_SUBREDDITS))
 
         # ── Debugging section ────────────────────────────────────────────
