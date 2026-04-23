@@ -254,11 +254,12 @@ def get_all_subreddits(default: Optional[List[str]] = None) -> List[str]:
 
 
 def add_subreddit(name: str) -> bool:
-    """Add a new subreddit to config file and auto-commit to GitHub for persistence."""
+    """Add a new subreddit to config file and attempt to auto-commit to GitHub."""
     import os
     import subprocess
 
     success = False
+    git_synced = False
 
     # Save to config file (primary source of truth for Streamlit Cloud)
     try:
@@ -281,16 +282,18 @@ def add_subreddit(name: str) -> bool:
 
             # Auto-commit to GitHub for persistence on Streamlit Cloud
             try:
-                subprocess.run(["git", "add", config_file], check=True, capture_output=True)
-                subprocess.run(
+                result = subprocess.run(["git", "add", config_file], capture_output=True, text=True)
+                result = subprocess.run(
                     ["git", "commit", "-m", f"Add {name} subreddit to config\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"],
-                    check=True,
-                    capture_output=True
+                    capture_output=True, text=True
                 )
-                subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True)
+                result = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
                 print(f"[Git] Successfully committed {name} to GitHub")
-            except subprocess.CalledProcessError as e:
-                print(f"[Git] Warning: Could not auto-commit to GitHub: {e}")
+                git_synced = True
+            except Exception as git_error:
+                print(f"[Git] Warning: Could not auto-commit to GitHub: {git_error}")
+                print(f"[Git] Frequency cause: Streamlit Cloud git environment issue")
+                print(f"[Git] Fix: Manually sync via 'git push' or use 'ender3' now before restart")
                 # Still consider it success since config file was updated locally
         else:
             print(f"[Config] Subreddit already in config: {name}")

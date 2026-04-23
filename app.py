@@ -351,8 +351,10 @@ DEFAULT_SUBREDDITS = ["bambulab", "EufyMakeOfficial", "snapmaker"]
 # Initialize database with default subreddits on first run
 init_default_subreddits(DEFAULT_SUBREDDITS)
 
-# Load subreddits from database
-ALL_SUBREDDITS = get_all_subreddits(default=DEFAULT_SUBREDDITS)
+# Load subreddits from config file into session state for session-wide persistence
+if "all_subreddits" not in st.session_state:
+    st.session_state.all_subreddits = get_all_subreddits(default=DEFAULT_SUBREDDITS)
+ALL_SUBREDDITS = st.session_state.all_subreddits
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -439,15 +441,15 @@ def main():
         if add_btn and new_subreddit:
             subreddit_name = new_subreddit.strip()
             # Check if already exists (case-insensitive)
-            existing_names = [s.lower() for s in ALL_SUBREDDITS]
+            existing_names = [s.lower() for s in st.session_state.all_subreddits]
             if subreddit_name.lower() not in existing_names:
                 if add_subreddit(subreddit_name):
-                    # Reload from database
-                    ALL_SUBREDDITS = get_all_subreddits(default=DEFAULT_SUBREDDITS)
-                    st.success(f"✅ 成功添加频道: **{subreddit_name}**")
-                    st.rerun()
+                    # Update session state immediately (for current session)
+                    st.session_state.all_subreddits.append(subreddit_name)
+                    st.success(f"✅ 成功添加频道: **{subreddit_name}**\n\n📌 这个频道现在可以被爬取和分析了！")
+                    st.info("💡 提示：为了保证下次应用重启后频道仍然存在，请等待自动 Git 提交完成。")
                 else:
-                    st.error(f"❌ 添加频道失败")
+                    st.error(f"❌ 添加频道失败，请检查频道名是否正确")
             else:
                 st.warning(f"⚠️ 频道 **{subreddit_name}** 已存在")
 
