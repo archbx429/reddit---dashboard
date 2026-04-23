@@ -253,10 +253,16 @@ def get_all_subreddits(default: Optional[List[str]] = None) -> List[str]:
     return default or []
 
 
-def add_subreddit(name: str) -> bool:
-    """Add a new subreddit to config file and attempt to auto-commit to GitHub."""
+def add_subreddit(name: str) -> tuple:
+    """Add a new subreddit to config file and attempt to auto-commit to GitHub.
+
+    Returns: (success: bool, git_synced: bool)
+    - success: Whether the subreddit was added locally
+    - git_synced: Whether it was synced to GitHub
+    """
     import os
     import subprocess
+    import threading
 
     success = False
     git_synced = False
@@ -281,27 +287,28 @@ def add_subreddit(name: str) -> bool:
             success = True
 
             # Auto-commit to GitHub for persistence on Streamlit Cloud
-            try:
-                result = subprocess.run(["git", "add", config_file], capture_output=True, text=True)
-                result = subprocess.run(
-                    ["git", "commit", "-m", f"Add {name} subreddit to config\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"],
-                    capture_output=True, text=True
-                )
-                result = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
-                print(f"[Git] Successfully committed {name} to GitHub")
-                git_synced = True
-            except Exception as git_error:
-                print(f"[Git] Warning: Could not auto-commit to GitHub: {git_error}")
-                print(f"[Git] Frequency cause: Streamlit Cloud git environment issue")
-                print(f"[Git] Fix: Manually sync via 'git push' or use 'ender3' now before restart")
-                # Still consider it success since config file was updated locally
+            def git_commit_async():
+                try:
+                    subprocess.run(["git", "add", config_file], capture_output=True, text=True, timeout=5)
+                    subprocess.run(
+                        ["git", "commit", "-m", f"Add {name} subreddit to config\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"],
+                        capture_output=True, text=True, timeout=10
+                    )
+                    subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, timeout=10)
+                    print(f"[Git] Successfully committed {name} to GitHub")
+                except Exception as git_error:
+                    print(f"[Git] Warning: Could not auto-commit to GitHub: {git_error}")
+
+            # Run git commit in background thread (doesn't block user)
+            git_thread = threading.Thread(target=git_commit_async, daemon=True)
+            git_thread.start()
         else:
             print(f"[Config] Subreddit already in config: {name}")
 
     except Exception as e:
         print(f"[Config] Error adding to config file: {e}")
 
-    return success
+    return success, git_synced
 
 
 def init_default_subreddits(defaults: List[str]) -> None:

@@ -443,11 +443,12 @@ def main():
             # Check if already exists (case-insensitive)
             existing_names = [s.lower() for s in st.session_state.all_subreddits]
             if subreddit_name.lower() not in existing_names:
-                if add_subreddit(subreddit_name):
+                success, git_synced = add_subreddit(subreddit_name)
+                if success:
                     # Update session state immediately (for current session)
                     st.session_state.all_subreddits.append(subreddit_name)
-                    st.success(f"✅ 成功添加频道: **{subreddit_name}**\n\n📌 这个频道现在可以被爬取和分析了！")
-                    st.info("💡 提示：为了保证下次应用重启后频道仍然存在，请等待自动 Git 提交完成。")
+                    st.success(f"✅ 成功添加频道: **{subreddit_name}**")
+                    st.info(f"✨ 新频道已立即可用！你可以现在点击【开始爬取】来爬取这个频道的内容。\n\n📌 Git 同步在后台进行中（通常几秒钟完成），这不会影响你的操作。")
                 else:
                     st.error(f"❌ 添加频道失败，请检查频道名是否正确")
             else:
