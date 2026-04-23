@@ -311,7 +311,8 @@ def add_subreddit(name: str) -> tuple:
                 print(f"[Config] ❌ 验证读取失败: {verify_error}", file=sys.stderr)
                 raise
 
-            # Check if new subreddit is in the verified list
+            # Check if new subreddit is in the verified list (case-sensitive exact match)
+            print(f"[Config] 检查 {name} 是否在 {verify_subs} 中...", file=sys.stderr)
             if name in verify_subs:
                 print(f"[Config] ✅ 验证通过: {name} 确实在文件中", file=sys.stderr)
                 success = True
@@ -334,9 +335,11 @@ def add_subreddit(name: str) -> tuple:
                 git_thread.start()
             else:
                 print(f"[Config] ❌ 验证失败: {name} 不在验证读取的列表中", file=sys.stderr)
-                print(f"[Config] 预期列表: {verify_subs}", file=sys.stderr)
+                print(f"[Config] 预期找到: {name}", file=sys.stderr)
+                print(f"[Config] 实际列表: {verify_subs}", file=sys.stderr)
+                print(f"[Config] 列表长度: {len(verify_subs)}", file=sys.stderr)
                 success = False
-                message = f"❌ 添加失败：写入验证失败，请检查日志"
+                message = f"❌ 添加失败：文件写入验证失败（文件可能无法写入）"
         else:
             print(f"[Config] ⚠️ {name} 已存在于配置文件中", file=sys.stderr)
             message = f"⚠️ {name} 已经存在"
