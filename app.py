@@ -20,9 +20,10 @@ from database import (
     add_subreddit,
     delete_subreddit,
     init_default_subreddits,
+    get_failed_analysis_posts,
 )
 from reddit_fetcher import fetch_all
-from analyzer import analyze_all
+from analyzer import analyze_all, analyze_failed_posts
 from scheduler import create_scheduler
 
 
@@ -420,6 +421,19 @@ def main():
             try:
                 analysed = analyze_all()
                 st.write(f"✅ 分析完成：共处理 **{analysed}** 条")
+
+                # If no new posts but there are failed analyses, offer to re-analyze
+                if fetched == 0:
+                    failed_posts = get_failed_analysis_posts()
+                    if failed_posts:
+                        st.write(f"⚠️ 发现 **{len(failed_posts)}** 条分析失败的帖子")
+                        if st.checkbox(f"🔄 重新分析这 {len(failed_posts)} 条失败的帖子？"):
+                            st.write("⏳ 正在重新分析失败的帖子 ...")
+                            try:
+                                re_analysed = analyze_failed_posts()
+                                st.write(f"✅ 重新分析完成：成功处理 **{re_analysed}** 条")
+                            except Exception as exc:
+                                st.write(f"❌ 重新分析出错：{exc}")
             except Exception as exc:
                 st.write(f"❌ 分析出错：{exc}")
 
