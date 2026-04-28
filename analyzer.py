@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from database import get_posts_needing_analysis, insert_analysis
+from database import get_posts_needing_analysis, insert_analysis, get_failed_analysis_posts
 
 load_dotenv()
 
@@ -258,6 +258,48 @@ def analyze_all() -> int:
             time.sleep(MIN_INTERVAL - elapsed)
 
     print(f"[Analyzer] Done. {success}/{len(posts)} posts analysed successfully.")
+    return success
+
+
+def analyze_failed_posts(fetch_date: Optional[str] = None) -> int:
+    """
+    Re-analyse posts with failed analysis (summary is '分析失败' or empty).
+    If fetch_date is provided, only re-analyse posts from that date.
+    Respects MAX_RPS rate limit and retries on failure.
+    Returns count of successfully re-analysed posts.
+    """
+    posts = get_failed_analysis_posts(fetch_date)
+    if not posts:
+        print(f"[Analyzer] No failed posts to re-analyse{f' for {fetch_date}' if fetch_date else ''}.")
+        return 0
+
+    print(f"[Analyzer] Re-analysing {len(posts)} failed posts{f' from {fetch_date}' if fetch_date else ''} ...")
+    success = 0
+
+    for i, post in enumerate(posts, start=1):
+        t_start = time.monotonic()
+
+        result = analyze_post(post)
+        if result is not None:
+            insert_analysis(post["post_id"], result)
+            success += 1
+            has_comments = bool(post.get("top_comments"))
+            media_tag = _detect_media_type(post)
+            print(
+                f"[Analyzer] [{i}/{len(posts)}] OK — "
+                f"{post['post_id']} | {result['sentiment']} | "
+                f"{'💬' if has_comments else '  '} {media_tag}{post.get('title', '')[:40]}"
+            )
+        else:
+            default = _default_analysis(post)
+            insert_analysis(post["post_id"], default)
+            print(f"[Analyzer] [{i}/{len(posts)}] FAILED — {post['post_id']}: {default['summary']}")
+
+        elapsed = time.monotonic() - t_start
+        if elapsed < MIN_INTERVAL:
+            time.sleep(MIN_INTERVAL - elapsed)
+
+    print(f"[Analyzer] Done. {success}/{len(posts)} posts re-analysed successfully.")
     return success
 
 

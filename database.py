@@ -192,6 +192,34 @@ def get_posts_needing_analysis() -> List[dict]:
         return []
 
 
+def get_failed_analysis_posts(fetch_date: Optional[str] = None) -> List[dict]:
+    """Return posts with failed analysis (summary is '分析失败' or empty) for a specific date."""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            if fetch_date:
+                cursor.execute(
+                    """
+                    SELECT p.* FROM posts p
+                    INNER JOIN analysis a ON p.post_id = a.post_id
+                    WHERE p.fetch_date = ? AND (a.summary = '分析失败' OR a.summary = '' OR a.summary IS NULL)
+                    """,
+                    (fetch_date,)
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT p.* FROM posts p
+                    INNER JOIN analysis a ON p.post_id = a.post_id
+                    WHERE a.summary = '分析失败' OR a.summary = '' OR a.summary IS NULL
+                    """
+                )
+            return [dict(row) for row in cursor.fetchall()]
+    except Exception as e:
+        print(f"[DB] Error fetching failed analysis posts: {e}")
+        return []
+
+
 def get_posts_with_analysis(
     fetch_date: Optional[str] = None,
     subreddits: Optional[List[str]] = None,
