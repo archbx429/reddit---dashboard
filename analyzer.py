@@ -11,8 +11,7 @@ import time
 from typing import Optional, List
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 from database import get_posts_needing_analysis, insert_analysis
 
