@@ -50,11 +50,12 @@ def main() -> None:
 
     # Launch Streamlit as a child process
     port = 8501
-    print(f"[Run] Starting Streamlit at http://localhost:{port} ...")
+    print(f"[Run] Starting Streamlit at http://0.0.0.0:{port} ...")
     streamlit_proc = subprocess.Popen(
         [
             sys.executable, "-m", "streamlit", "run", "app.py",
             f"--server.port={port}",
+            "--server.address=0.0.0.0",
             "--server.headless=true",
             "--browser.gatherUsageStats=false",
         ],

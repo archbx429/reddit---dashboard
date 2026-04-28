@@ -1,10 +1,13 @@
 import sqlite3
 import json
+import os
 from datetime import datetime
 from contextlib import contextmanager
 from typing import List, Optional
 
-DB_PATH = "reddit_monitor.db"
+# Support both local and cloud SQLite databases
+DB_PATH = os.environ.get("DB_PATH", "reddit_monitor.db")
+DB_URL = os.getenv("SQLITE_CLOUD_URL")  # e.g., sqlitecloud://user:password@host/database
 
 
 def init_db():
@@ -72,9 +75,22 @@ def init_db():
 
 @contextmanager
 def get_connection():
-    """Yield a SQLite connection and close it after use."""
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
+    """Yield a SQLite connection and close it after use.
+    Supports both local SQLite and SQLite Cloud."""
+    if DB_URL:
+        # Use SQLite Cloud for remote database
+        try:
+            import sqlitecloud
+            conn = sqlitecloud.connect(DB_URL)
+            conn.row_factory = sqlite3.Row
+        except ImportError:
+            print("[DB] sqlitecloud not installed. Using local database.")
+            conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+    else:
+        # Use local SQLite database
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
     try:
         yield conn
     finally:
