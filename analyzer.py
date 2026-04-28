@@ -19,7 +19,7 @@ from database import get_posts_needing_analysis, insert_analysis
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-2.5-flash"
 
 MAX_RPS = 5
 MIN_INTERVAL = 1.0 / MAX_RPS   # 0.2 s between calls
