@@ -11,14 +11,15 @@ import time
 from typing import Optional, List
 
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from database import get_posts_needing_analysis, insert_analysis
 
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-2.0-flash"
 
 MAX_RPS = 5
 MIN_INTERVAL = 1.0 / MAX_RPS   # 0.2 s between calls
@@ -190,11 +191,6 @@ def analyze_post(post: dict) -> Optional[dict]:
             resp = _get_client().models.generate_content(
                 model=MODEL,
                 contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.2,
-                    max_output_tokens=1024,
-                    thinking_config=types.ThinkingConfig(thinking_budget=0),
-                ),
             )
             content = resp.text or ""
             result = _parse_response(content)
